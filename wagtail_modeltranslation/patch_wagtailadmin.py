@@ -97,7 +97,6 @@ class WagtailTranslator(object):
                 _patch_stream_field_meaningful_value(descriptor)
 
         # SLUG FIELD PATCHING
-
         try:
             slug_field = model._meta.get_field('slug')
             _patch_pre_save(slug_field)
