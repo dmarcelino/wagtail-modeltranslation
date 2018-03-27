@@ -12,6 +12,10 @@ from django.test.utils import override_settings
 from django.utils.translation import get_language, trans_real
 from modeltranslation import settings as mt_settings, translator
 try:
+    from wagtail.core.models import Page as WagtailPage
+except ImportError:
+    from wagtail.wagtailcore.models import Page as WagtailPage
+try:
     from wagtail import VERSION
 except ImportError:
     VERSION = 1, 6, 3  # assume it's 1.6.3, the latest version without VERSION
@@ -832,6 +836,40 @@ class WagtailModeltranslationTest(WagtailModeltranslationTestBase):
         self.assertEqual(root_page.url, '/en/')
         self.assertEqual(page_01.url, '/en/url-en-01/')
         self.assertEqual(page_02.url, '/en/url-de-02/')
+
+    def test_root_page_slug(self):
+        site_pages = {
+            'model': models.TestRootPage,
+            'kwargs': {'title': 'root URL', 'slug_de': 'root-de', 'slug_en': 'root-en'},
+            'children': {
+                'child1': {
+                    'model': models.TestSlugPage1,
+                    'kwargs': {'title': 'child1 URL', 'slug_de': 'url-de-01', 'slug_en': 'url-en-01'},
+                },
+                'child2': {
+                    'model': models.TestSlugPage2,
+                    'kwargs': {'title': 'child2 URL', 'slug': 'url-de-02'},
+                },
+            },
+        }
+        page_factory.create_page_tree(site_pages)
+
+        page_01 = site_pages['children']['child1']['instance']
+        page_02 = site_pages['children']['child2']['instance']
+
+        wagtail_page_01 = WagtailPage.objects.get(id=page_01.id)
+        wagtail_page_02 = WagtailPage.objects.get(id=page_02.id)
+
+        self.assertEqual(wagtail_page_01.url, '/de/url-de-01/')
+        self.assertEqual(wagtail_page_02.url, '/de/url-de-02/')
+
+        trans_real.activate('en')
+
+        wagtail_page_01 = WagtailPage.objects.get(id=page_01.id)
+        wagtail_page_02 = WagtailPage.objects.get(id=page_02.id)
+
+        self.assertEqual(wagtail_page_01.url, '/en/url-en-01/')
+        self.assertEqual(wagtail_page_02.url, '/en/url-de-02/')
 
     def test_set_translation_url_paths_command(self):
         """
